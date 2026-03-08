@@ -217,12 +217,12 @@ function M.resolve(specs)
 			table.insert(configs, layer.config)
 		end
 
-		if layer.plugins then
+		if type(layer.plugins) == "string" and layer._import_path then
+			table.insert(result, { import = layer._import_path .. "." .. layer.plugins })
+		elseif type(layer.plugins) == "table" then
 			for _, plugin in ipairs(layer.plugins) do
 				table.insert(result, plugin)
 			end
-		elseif layer._import_path then
-			table.insert(result, { import = layer._import_path .. ".plugins" })
 		end
 	end
 

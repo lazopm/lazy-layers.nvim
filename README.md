@@ -102,7 +102,7 @@ require("lazy-layers").resolve({
 | `cond`         | `fun(): boolean` | Whether to activate (default `true`)                |
 | `init`         | `fun()`          | Runs at resolve time, before `lazy.setup()`         |
 | `config`       | `fun()`          | Runs after all plugins are loaded (`LazyDone`)      |
-| `plugins`      | `table[]`        | Inline lazy.nvim plugin specs                       |
+| `plugins`      | `string\|table[]`| Plugins: string for relative import, table for inline specs |
 
 ### Import Form
 
@@ -120,7 +120,14 @@ return {
 
 The `name` defaults to the file/directory name if omitted (e.g. `snippets.lua` → `"snippets"`).
 
-Subdirectory layers can also have a sibling `plugins` module at `lua/layers/<name>/plugins.lua` (or `lua/layers/<name>/plugins/`), loaded via lazy.nvim's `import`.
+Subdirectory layers can use a string shorthand to import a sibling module relative to the layer:
+
+```lua
+-- lua/layers/base/init.lua
+return {
+  plugins = "plugins",  -- resolves to { import = "layers.base.plugins" }
+}
+```
 
 ### Git Repos and Local Directories
 
