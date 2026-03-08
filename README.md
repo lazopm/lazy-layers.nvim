@@ -97,7 +97,7 @@ require("lazy-layers").resolve({
 
 | Field          | Type             | Description                                         |
 | -------------- | ---------------- | --------------------------------------------------- |
-| `name`         | `string`         | Layer identity (required for inline layers)         |
+| `name`         | `string`         | Layer identity (inferred from directory if omitted) |
 | `dependencies` | `string[]`       | Layer names this layer depends on                   |
 | `cond`         | `fun(): boolean` | Whether to activate (default `true`)                |
 | `init`         | `fun()`          | Runs at resolve time, before `lazy.setup()`         |
@@ -106,24 +106,25 @@ require("lazy-layers").resolve({
 
 ### Import Form
 
-`{ import = "layers" }` scans `lua/layers/` for subdirectories. Each must have an `init.lua` that returns a layer table:
+`{ import = "layers" }` scans `lua/layers/` for subdirectories and `.lua` files. Subdirectories must have an `init.lua` that returns a layer table. Standalone files (e.g. `lua/layers/snippets.lua`) can return a layer table directly:
 
 ```lua
--- lua/layers/work/init.lua
+-- lua/layers/snippets.lua
 return {
-  name = "work",
   dependencies = { "base" },
-  cond = function()
-    return vim.uv.fs_stat(vim.fn.expand("~/work")) ~= nil
-  end,
+  plugins = {
+    { "L3MON4D3/LuaSnip" },
+  },
 }
 ```
 
-Plugins go in a sibling module at `lua/layers/<name>/plugins.lua` (or `lua/layers/<name>/plugins/`), loaded via lazy.nvim's `import`.
+The `name` defaults to the file/directory name if omitted (e.g. `snippets.lua` → `"snippets"`).
+
+Subdirectory layers can also have a sibling `plugins` module at `lua/layers/<name>/plugins.lua` (or `lua/layers/<name>/plugins/`), loaded via lazy.nvim's `import`.
 
 ### Git Repos and Local Directories
 
-For `"user/repo"` or `{ dir = "path" }`, the target must contain a Lua module returning a layer table (e.g. `lua/<name>/init.lua`). The module is added to the rtp automatically. Git repos are cloned to lazy's install directory on first use.
+For `"user/repo"` or `{ dir = "path" }`, the target must contain a Lua module returning a layer table (e.g. `lua/<name>/init.lua`). The module is added to the rtp automatically. Git repos are cloned to the plugin's `cloned/` directory on first use.
 
 ## How It Works
 

@@ -1,6 +1,8 @@
 local M = {}
 
---- Clone a GitHub repo to lazy's install directory if not already present.
+local plugin_root = vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":h:h:h")
+
+--- Clone a GitHub repo into the plugin's cloned/ directory if not already present.
 ---@param repo string  "user/repo" format
 ---@return string? install_path
 ---@return string? mod_name
@@ -10,7 +12,7 @@ local function ensure_repo(repo)
 		return nil, nil
 	end
 
-	local install_path = vim.fn.stdpath("data") .. "/lazy/" .. name
+	local install_path = plugin_root .. "/cloned/" .. name
 	if not vim.uv.fs_stat(install_path) then
 		local url = "https://github.com/" .. repo .. ".git"
 		vim.fn.system({ "git", "clone", "--filter=blob:none", url, install_path })
@@ -79,6 +81,13 @@ function M.resolve(specs)
 	-- 1. Collect all layers
 	local candidates = {}
 
+	local function add_layer(layer)
+		if candidates[layer.name] then
+			vim.notify("lazy-layers: layer '" .. layer.name .. "' defined more than once, last definition wins", vim.log.levels.WARN)
+		end
+		candidates[layer.name] = layer
+	end
+
 	for _, spec in ipairs(specs) do
 		if type(spec) == "string" then
 			-- "user/repo" shorthand
@@ -86,7 +95,7 @@ function M.resolve(specs)
 			if path then
 				local layer = load_external(path, mod_name)
 				if layer then
-					candidates[layer.name] = layer
+					add_layer(layer)
 				end
 			end
 		elseif spec.import then
@@ -95,11 +104,20 @@ function M.resolve(specs)
 			local dir = vim.fn.stdpath("config") .. "/lua/" .. mod_path:gsub("%.", "/")
 			if vim.uv.fs_stat(dir) then
 				for entry, entry_type in vim.fs.dir(dir) do
+					local mod_name
 					if entry_type == "directory" then
-						local ok, layer = pcall(require, mod_path .. "." .. entry)
-						if ok and type(layer) == "table" and layer.name then
-							layer._import_path = mod_path .. "." .. entry
-							candidates[layer.name] = layer
+						mod_name = entry
+					elseif entry:match("%.lua$") and entry ~= "init.lua" then
+						mod_name = entry:gsub("%.lua$", "")
+					end
+					if mod_name then
+						local ok, layer = pcall(require, mod_path .. "." .. mod_name)
+						if ok and type(layer) == "table" then
+							if not layer.name then
+								layer.name = mod_name
+							end
+							layer._import_path = mod_path .. "." .. mod_name
+							add_layer(layer)
 						end
 					end
 				end
@@ -112,7 +130,7 @@ function M.resolve(specs)
 				local overrides = extract_overrides(spec, { "dir" })
 				local layer = load_external(expanded, mod_name, overrides)
 				if layer then
-					candidates[layer.name] = layer
+					add_layer(layer)
 				end
 			else
 				vim.notify("lazy-layers: directory not found: " .. expanded, vim.log.levels.WARN)
@@ -124,12 +142,12 @@ function M.resolve(specs)
 				local overrides = extract_overrides(spec, {})
 				local layer = load_external(path, mod_name, overrides)
 				if layer then
-					candidates[layer.name] = layer
+					add_layer(layer)
 				end
 			end
 		elseif spec.name then
 			-- Inline layer
-			candidates[spec.name] = spec
+			add_layer(spec)
 		end
 	end
 
