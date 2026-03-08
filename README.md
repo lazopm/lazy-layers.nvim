@@ -1,4 +1,6 @@
 # lazy-layers.nvim
+> [!WARNING]
+> This plugin was largely vibe-coded and not well tested yet.
 
 A layer system for modular Neovim configs built on [lazy.nvim](https://github.com/folke/lazy.nvim). Organize plugins into dependency-aware, conditionally-loaded layers.
 
